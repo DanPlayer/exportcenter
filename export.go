@@ -1,6 +1,7 @@
 package exportcenter
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"github.com/goccy/go-json"
@@ -47,10 +48,10 @@ type Options struct {
 
 // Queue 队列
 type Queue interface {
-	Create(key string) error            // 创建队列
-	Pop(key string) <-chan string       // 拉取数据
-	Push(key string, data string) error // 推送数据
-	Destroy(key string) error           // 删除队列
+	CreateQueue(ctx context.Context, key string) error       // 创建队列
+	Pop(ctx context.Context, key string) <-chan string       // 拉取数据
+	Push(ctx context.Context, key string, data string) error // 推送数据
+	Destroy(ctx context.Context, key string) error           // 删除队列
 }
 
 func NewClient(options Options) (*ExportCenter, error) {
@@ -115,6 +116,7 @@ func (ec *ExportCenter) CreateTask(key, name, description, source, destination, 
 	// 根据数据量，创建导出任务的数据队列
 	sheetCount := int(math.Ceil(float64(count) / float64(ec.sheetMaxRows)))
 
+	ctx := context.Background()
 	keys := make([]string, 0)
 	for i := 1; i <= sheetCount; i++ {
 		queueKey := ""
@@ -124,7 +126,7 @@ func (ec *ExportCenter) CreateTask(key, name, description, source, destination, 
 			queueKey = fmt.Sprintf("%s_sheet%d", task.QueueKey, i)
 		}
 
-		err = ec.Queue.Create(queueKey)
+		err = ec.Queue.CreateQueue(ctx, queueKey)
 		if err != nil {
 			return 0, nil, err
 		}
@@ -137,12 +139,14 @@ func (ec *ExportCenter) CreateTask(key, name, description, source, destination, 
 
 // PushData 推送导出数据到队列
 func (ec *ExportCenter) PushData(key string, data string) error {
-	return ec.Queue.Push(key, data)
+	ctx := context.Background()
+	return ec.Queue.Push(ctx, key, data)
 }
 
 // PopData 拉取队列数据
 func (ec *ExportCenter) PopData(key string) <-chan string {
-	return ec.Queue.Pop(key)
+	ctx := context.Background()
+	return ec.Queue.Pop(ctx, key)
 }
 
 // GetTask 获取任务信息
@@ -388,6 +392,7 @@ func (ec *ExportCenter) ExportToExcel(id int64, filePath string, before func(key
 	}
 
 	// 销毁队列
+	ctx := context.Background()
 	for i := 1; i <= sheetCount; i++ {
 		queueKey := ""
 		if ec.queuePrefix != "" {
@@ -395,7 +400,7 @@ func (ec *ExportCenter) ExportToExcel(id int64, filePath string, before func(key
 		} else {
 			queueKey = fmt.Sprintf("%s_sheet%d", task.QueueKey, i)
 		}
-		_ = ec.Queue.Destroy(queueKey)
+		_ = ec.Queue.Destroy(ctx, queueKey)
 	}
 
 	// 根据指定路径保存文件

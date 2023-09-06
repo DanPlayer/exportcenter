@@ -1,6 +1,7 @@
 package rabbitmq
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"time"
@@ -49,8 +50,8 @@ func NewRabbitMQ(options Options) *RabbitMQ {
 	return rabbitmq
 }
 
-// Create 创建队列
-func (r *RabbitMQ) Create(key string) error {
+// CreateQueue 创建队列
+func (r *RabbitMQ) CreateQueue(ctx context.Context, key string) error {
 	exchange := fmt.Sprintf("%s-exchange", key)
 	queue := fmt.Sprintf("%s-queue", key)
 	bindKey := fmt.Sprintf("%s-bindkey", key)
@@ -123,7 +124,7 @@ func (r *RabbitMQ) DeclareConsume(key string) error {
 	return nil
 }
 
-func (r *RabbitMQ) Push(key, data string) error {
+func (r *RabbitMQ) Push(ctx context.Context, key, data string) error {
 	exchange := fmt.Sprintf("%s-exchange", key)
 	bindKey := fmt.Sprintf("%s-bindkey", key)
 
@@ -140,7 +141,7 @@ func (r *RabbitMQ) Push(key, data string) error {
 }
 
 // Pop 消费队列
-func (r *RabbitMQ) Pop(key string) <-chan string {
+func (r *RabbitMQ) Pop(ctx context.Context, key string) <-chan string {
 	list := make(chan string)
 	var (
 		get  amqp.Delivery
@@ -173,7 +174,7 @@ func (r *RabbitMQ) Pop(key string) <-chan string {
 }
 
 // Destroy 断开channel 和 connection
-func (r *RabbitMQ) Destroy(key string) error {
+func (r *RabbitMQ) Destroy(ctx context.Context, key string) error {
 	exchange := fmt.Sprintf("%s-exchange", key)
 	queue := fmt.Sprintf("%s-queue", key)
 
