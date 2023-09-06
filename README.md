@@ -1,19 +1,18 @@
 # exportcenter
-
 导出中心
 
-# 简介
-
+## 简介
 exportcenter能够简便的帮助大家构建大数据导出系统，exportcenter载入后提供导出任务的自动创建，以及大数据量并发安全写入
 
-# 获取
-
+## 获取
 ```
 go get github.com/DanPlayer/exportcenter
 ```
 
-# 使用
+## 使用
+#### Redis案例
 
+#### RabbitMQ案例
 ```
 func demo() {
 	getWd, _ := os.Getwd()
