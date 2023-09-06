@@ -1,8 +1,8 @@
 # exportcenter
-导出中心
+大数据导出中心，生成excel
 
 ## 简介
-exportcenter能够简便的帮助大家构建大数据导出系统，exportcenter载入后提供导出任务的自动创建，以及大数据量并发安全写入
+exportcenter能够简便的帮助大家构建大数据导出系统，exportcenter载入后提供导出任务的自动创建，以及大数据量并发安全写入excel
 
 ## 获取
 ```

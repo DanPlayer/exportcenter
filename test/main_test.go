@@ -50,7 +50,7 @@ func TestRabbitMqTaskExport(t *testing.T) {
 	}
 
 	id, keys, err := center.CreateTask(
-		"test",
+		"test_mq",
 		"test_name",
 		"test_file",
 		"测试使用",
@@ -109,7 +109,7 @@ func TestRedisTaskExport(t *testing.T) {
 	}
 
 	id, keys, err := center.CreateTask(
-		"test",
+		"test_redis",
 		"test_name",
 		"test_file",
 		"测试使用",
