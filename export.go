@@ -12,6 +12,7 @@ import (
 	"gorm.io/gorm"
 	"math"
 	"os"
+	"reflect"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -85,6 +86,7 @@ func NewClient(options Options) (*ExportCenter, error) {
 		isUploadCloud: options.IsUploadCloud,
 		upload:        options.Upload,
 		logRootPath:   options.LogRootPath,
+		outTime:       options.OutTime,
 	}, nil
 }
 
@@ -324,7 +326,7 @@ func (ec *ExportCenter) ExportToExcel(id int64, filePath string, before func(key
 					continue
 				}
 
-				var values []interface{}
+				var values interface{}
 				err = json.Unmarshal([]byte(data), &values)
 				if err != nil {
 					// 记录错误数据数
@@ -340,8 +342,10 @@ func (ec *ExportCenter) ExportToExcel(id int64, filePath string, before func(key
 					continue
 				}
 
+				slice := ec.interfaceToSlice(values)
+
 				// 写入excel文件
-				err = swMap[currentSheetIndex].SetRow(cell, values)
+				err = swMap[currentSheetIndex].SetRow(cell, slice)
 				if err != nil {
 					// 记录错误数据数
 					atomic.AddInt64(&errRowCount, 1)
@@ -438,4 +442,16 @@ func (ec *ExportCenter) ExportToExcel(id int64, filePath string, before func(key
 	}
 
 	return
+}
+
+func (ec *ExportCenter) interfaceToSlice(obj interface{}) []interface{} {
+	var list []interface{}
+	if reflect.TypeOf(obj).Kind() == reflect.Slice {
+		s := reflect.ValueOf(obj)
+		for i := 0; i < s.Len(); i++ {
+			ele := s.Index(i)
+			list = append(list, ele.Interface())
+		}
+	}
+	return list
 }
