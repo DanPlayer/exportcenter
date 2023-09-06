@@ -6,6 +6,7 @@ require (
 	github.com/goccy/go-json v0.10.2
 	github.com/panjf2000/ants/v2 v2.8.1
 	github.com/sirupsen/logrus v1.9.3
+	github.com/streadway/amqp v1.1.0
 	github.com/xuri/excelize/v2 v2.8.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gorm.io/gorm v1.25.4

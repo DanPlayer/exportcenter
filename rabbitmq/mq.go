@@ -8,7 +8,15 @@ import (
 	"github.com/streadway/amqp"
 )
 
-var Client = NewRabbitMQ()
+var options = Options{
+	UserName: "guest",
+	Password: "guest",
+	Host:     "127.0.0.1",
+	Vhost:    "/",
+}
+
+// Client 测试案例使用的客户端，请自定义
+var Client = NewRabbitMQ(options)
 
 // RabbitMQ rabbitMQ结构体
 type RabbitMQ struct {
@@ -25,13 +33,7 @@ type Options struct {
 }
 
 // NewRabbitMQ 创建简单模式下RabbitMQ实例
-func NewRabbitMQ() *RabbitMQ {
-	options := Options{
-		UserName: "guest",
-		Password: "guest",
-		Host:     "127.0.0.1",
-		Vhost:    "/",
-	}
+func NewRabbitMQ(options Options) *RabbitMQ {
 	// 创建RabbitMQ实例
 	rabbitmq := &RabbitMQ{}
 	var err error
