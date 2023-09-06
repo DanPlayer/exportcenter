@@ -409,7 +409,7 @@ func (ec *ExportCenter) ExportToExcel(id int64, filePath string, before func(key
 
 	// 根据指定路径保存文件
 	if err := f.SaveAs(filePath); err != nil {
-		fmt.Println(err)
+		logrus.Error(err)
 		return err
 	}
 
