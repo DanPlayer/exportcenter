@@ -1,4 +1,4 @@
-module exportcenter
+module github.com/DanPlayer/exportcenter
 
 go 1.20
 
