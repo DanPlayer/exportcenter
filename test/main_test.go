@@ -1,10 +1,10 @@
 package test
 
 import (
-	"exportcenter"
-	"exportcenter/rabbitmq"
-	"exportcenter/redis"
 	"fmt"
+	"github.com/DanPlayer/exportcenter"
+	"github.com/DanPlayer/exportcenter/rabbitmq"
+	"github.com/DanPlayer/exportcenter/redis"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/schema"
