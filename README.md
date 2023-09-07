@@ -62,6 +62,11 @@ if err != nil {
 }
 ```
 
+#### 开启任务
+```
+center.StartTask(int64(id))
+```
+
 #### 导出表格
 ```
 err = center.ExportToExcel(int64(id), "./test.xlsx", func(key string) error {
@@ -125,6 +130,8 @@ func TestRedisTaskExport(t *testing.T) {
 			}
 		}
 	}
+	
+	center.StartTask(int64(id))
 
 	err = center.ExportToExcel(int64(id), "./test.xlsx", nil)
 	if err != nil {
@@ -180,6 +187,8 @@ func demo() {
 			}
 		}
 	}
+	
+	center.StartTask(int64(id))
 
 	err = center.ExportToExcel(int64(id), "./test.xlsx", func(key string) error {
 		// 重新开启消费者
