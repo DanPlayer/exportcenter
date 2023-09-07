@@ -20,6 +20,8 @@ import (
 
 var DbClient *gorm.DB
 
+var startSignal = make(map[int64]chan bool)
+
 type ExportCenter struct {
 	Db            *gorm.DB
 	Queue         Queue
@@ -136,6 +138,9 @@ func (ec *ExportCenter) CreateTask(key, name, description, source, destination, 
 		keys = append(keys, queueKey)
 	}
 
+	// 开启任务开始信号通道
+	startSignal[int64(task.ID)] = make(chan bool, 1)
+
 	return task.ID, keys, err
 }
 
@@ -187,6 +192,11 @@ func (ec *ExportCenter) UpdateTaskErrLogUrl(id int64, url string) error {
 	return task.UpdateErrLogUrlByID(id, url)
 }
 
+// StartTask 开启任务
+func (ec *ExportCenter) StartTask(id int64) {
+	startSignal[id] <- true
+}
+
 // ExportToExcel 导出成excel表格，格式
 func (ec *ExportCenter) ExportToExcel(id int64, filePath string, before func(key string) error) (err error) {
 	// 创建日志文件
@@ -214,6 +224,24 @@ func (ec *ExportCenter) ExportToExcel(id int64, filePath string, before func(key
 		// 保存日志地址
 		_ = ec.UpdateTaskErrLogUrl(id, logPath)
 	}()
+
+	// 接收到开启信号再开启任务
+	start := false
+	for {
+		select {
+		case start = <-startSignal[id]:
+			if start {
+				break
+			}
+		case <-time.After(60 * time.Second):
+			logrus.Error(fmt.Sprintf("开启任务超时，超时时间1分钟，请及时开启任务"))
+			return nil
+		}
+		if start {
+			close(startSignal[id])
+			break
+		}
+	}
 
 	// 获取任务信息
 	task, err := ec.GetTask(id)
@@ -323,7 +351,7 @@ func (ec *ExportCenter) ExportToExcel(id int64, filePath string, before func(key
 				if data == "" {
 					// 记录错误数据数
 					atomic.AddInt64(&errRowCount, 1)
-					continue
+					break
 				}
 
 				var values interface{}
@@ -332,14 +360,14 @@ func (ec *ExportCenter) ExportToExcel(id int64, filePath string, before func(key
 					// 记录错误数据数
 					atomic.AddInt64(&errRowCount, 1)
 					logrus.Error(err)
-					continue
+					break
 				}
 
 				cell, err := excelize.CoordinatesToCellName(1, int(currentRowNum))
 				if err != nil {
 					// 记录错误数据数
 					atomic.AddInt64(&errRowCount, 1)
-					continue
+					break
 				}
 
 				slice := ec.interfaceToSlice(values)
@@ -349,13 +377,16 @@ func (ec *ExportCenter) ExportToExcel(id int64, filePath string, before func(key
 				if err != nil {
 					// 记录错误数据数
 					atomic.AddInt64(&errRowCount, 1)
-					continue
+					break
 				}
 			case <-time.After(ec.outTime):
 				out = true
 				outErr := fmt.Sprintf("%d行写入数据超时", currentRowNum)
 				fmt.Println(outErr)
-				logrus.Error(outErr)
+				logrus.WithFields(logrus.Fields{
+					"currentRowNum": currentRowNum,
+					"count":         currentCount,
+				}).Error(outErr)
 				break
 			}
 
@@ -366,7 +397,7 @@ func (ec *ExportCenter) ExportToExcel(id int64, filePath string, before func(key
 			// 增加数据到当前sheet并记录当前数据行索引，达到限制新增sheet，并重置当前sheet索引值
 			atomic.AddInt64(&count, 1) // 记录数据进度
 			atomic.AddInt64(&rowCount, 1)
-			if currentRowNum > ec.sheetMaxRows || currentCount >= task.CountNum {
+			if currentRowNum > ec.sheetMaxRows || currentCount+1 >= task.CountNum {
 				atomic.StoreInt64(&rowCount, 0)
 				_ = swMap[currentSheetIndex].Flush()
 				break

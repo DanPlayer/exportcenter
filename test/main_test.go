@@ -78,6 +78,8 @@ func TestRabbitMqTaskExport(t *testing.T) {
 		}
 	}
 
+	center.StartTask(int64(id))
+
 	err = center.ExportToExcel(int64(id), "./test.xlsx", func(key string) error {
 		// 重新开启消费者
 		err := rabbitmq.Client.DeclareConsume(key)
@@ -136,6 +138,8 @@ func TestRedisTaskExport(t *testing.T) {
 			}
 		}
 	}
+
+	center.StartTask(int64(id))
 
 	err = center.ExportToExcel(int64(id), "./test.xlsx", nil)
 	if err != nil {
