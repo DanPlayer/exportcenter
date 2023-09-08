@@ -327,7 +327,6 @@ func (ec *ExportCenter) ExportToExcel(id int64, filePath string, before func(key
 
 	// 判断sheet的数据量是否达到限制，达到限制则增加数据到下一张sheet，设置当前数据增加的sheet索引值
 	count := int64(0)
-	rowCount := int64(1)
 	errRowCount := int64(0)
 
 	// 创建并发工作组，在工作组中使用协程处理数据写入，单个协程会有一个小时的过期时间，一个小时内未完成单表设置的最大数量就会任务失败
@@ -341,6 +340,8 @@ func (ec *ExportCenter) ExportToExcel(id int64, filePath string, before func(key
 			queueKey = fmt.Sprintf("%s_sheet%d", task.QueueKey, currentSheetIndex)
 		}
 
+		// 设置当前首行
+		rowCount := int64(1)
 		// 拉取队列数据
 		for {
 			currentRowNum := atomic.LoadInt64(&rowCount) + 1 // 当前行
