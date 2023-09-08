@@ -19,6 +19,7 @@ import (
 )
 
 var DbClient *gorm.DB
+var log = logrus.New()
 
 var startSignal = make(map[int64]chan bool)
 
@@ -208,15 +209,15 @@ func (ec *ExportCenter) ExportToExcel(id int64, filePath string, before func(key
 		MaxAge:     28,   // 保留过期文件最大时间，单位 天
 		Compress:   true, // 是否压缩日志，默认是不压缩。这里设置为true，压缩日志
 	}
-	logrus.SetOutput(logger)
+	log.SetOutput(logger)
 
-	logrus.WithFields(logrus.Fields{
+	log.WithFields(logrus.Fields{
 		"task_id": id,
 		"time":    time.Now(),
 	}).Info("task start")
 
 	defer func() {
-		logrus.WithFields(logrus.Fields{
+		log.WithFields(logrus.Fields{
 			"task_id": id,
 			"time":    time.Now(),
 		}).Info("task end")
@@ -234,7 +235,7 @@ func (ec *ExportCenter) ExportToExcel(id int64, filePath string, before func(key
 				break
 			}
 		case <-time.After(60 * time.Second):
-			logrus.Error(fmt.Sprintf("开启任务超时，超时时间1分钟，请及时开启任务"))
+			log.Error(fmt.Sprintf("开启任务超时，超时时间1分钟，请及时开启任务"))
 			return nil
 		}
 		if start {
@@ -246,13 +247,13 @@ func (ec *ExportCenter) ExportToExcel(id int64, filePath string, before func(key
 	// 获取任务信息
 	task, err := ec.GetTask(id)
 	if err != nil {
-		logrus.Error(err)
+		log.Error(err)
 		return err
 	}
 
 	err = ec.ConsultTask(id)
 	if err != nil {
-		logrus.Error(err)
+		log.Error(err)
 		return err
 	}
 
@@ -263,7 +264,7 @@ func (ec *ExportCenter) ExportToExcel(id int64, filePath string, before func(key
 	f := excelize.NewFile()
 	defer func() {
 		if err := f.Close(); err != nil {
-			logrus.Error(err)
+			log.Error(err)
 			fmt.Println(err)
 		}
 	}()
@@ -288,7 +289,7 @@ func (ec *ExportCenter) ExportToExcel(id int64, filePath string, before func(key
 
 		err = before(queueKey)
 		if err != nil {
-			logrus.Error(err)
+			log.Error(err)
 			return err
 		}
 
@@ -298,7 +299,7 @@ func (ec *ExportCenter) ExportToExcel(id int64, filePath string, before func(key
 			// 创建sheet
 			_, err = f.NewSheet(fmt.Sprintf("Sheet%d", i))
 			if err != nil {
-				logrus.Error(err)
+				log.Error(err)
 				return err
 			}
 		}
@@ -306,7 +307,7 @@ func (ec *ExportCenter) ExportToExcel(id int64, filePath string, before func(key
 		// 获取写入器
 		sw, err := f.NewStreamWriter(currentSheet)
 		if err != nil {
-			fmt.Println(err)
+			log.Error(err)
 			return err
 		}
 		swMap[int32(i)] = sw
@@ -319,7 +320,7 @@ func (ec *ExportCenter) ExportToExcel(id int64, filePath string, before func(key
 		cell, _ := excelize.CoordinatesToCellName(1, 1)
 		err = sw.SetRow(cell, headers)
 		if err != nil {
-			logrus.Error(err)
+			log.Error(err)
 			return err
 		}
 	}
@@ -359,7 +360,7 @@ func (ec *ExportCenter) ExportToExcel(id int64, filePath string, before func(key
 				if err != nil {
 					// 记录错误数据数
 					atomic.AddInt64(&errRowCount, 1)
-					logrus.Error(err)
+					log.Error(err)
 					break
 				}
 
@@ -383,7 +384,7 @@ func (ec *ExportCenter) ExportToExcel(id int64, filePath string, before func(key
 				out = true
 				outErr := fmt.Sprintf("%d行写入数据超时", currentRowNum)
 				fmt.Println(outErr)
-				logrus.WithFields(logrus.Fields{
+				log.WithFields(logrus.Fields{
 					"currentRowNum": currentRowNum,
 					"count":         currentCount,
 				}).Error(outErr)
@@ -405,7 +406,7 @@ func (ec *ExportCenter) ExportToExcel(id int64, filePath string, before func(key
 		}
 
 		wg.Done()
-	}, ants.WithExpiryDuration(3600))
+	}, ants.WithExpiryDuration(3600), ants.WithMaxBlockingTasks(ec.goroutineMax), ants.WithLogger(log))
 	defer p.Release()
 	// 提交协程任务
 	for i := 0; i < sheetCount; i++ {
@@ -418,7 +419,7 @@ func (ec *ExportCenter) ExportToExcel(id int64, filePath string, before func(key
 	if count >= task.CountNum {
 		err = ec.CompleteTask(id, count)
 		if err != nil {
-			logrus.Error(err)
+			log.Error(err)
 			return err
 		}
 	} else {
@@ -440,7 +441,7 @@ func (ec *ExportCenter) ExportToExcel(id int64, filePath string, before func(key
 
 	// 根据指定路径保存文件
 	if err := f.SaveAs(filePath); err != nil {
-		logrus.Error(err)
+		log.Error(err)
 		return err
 	}
 
@@ -448,26 +449,26 @@ func (ec *ExportCenter) ExportToExcel(id int64, filePath string, before func(key
 		// 将文件上传至云端，记录下载地址
 		url, err := ec.upload(filePath)
 		if err != nil {
-			logrus.Error(err)
+			log.Error(err)
 			return err
 		}
 
 		err = ec.UpdateTaskDownloadUrl(id, url)
 		if err != nil {
-			logrus.Error(err)
+			log.Error(err)
 			return err
 		}
 
 		// 删除本地文件
 		err = os.Remove(filePath)
 		if err != nil {
-			logrus.Error(err)
+			log.Error(err)
 			return err
 		}
 	} else {
 		err = ec.UpdateTaskDownloadUrl(id, filePath)
 		if err != nil {
-			logrus.Error(err)
+			log.Error(err)
 			return err
 		}
 	}
