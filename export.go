@@ -195,6 +195,10 @@ func (ec *ExportCenter) UpdateTaskErrLogUrl(id int64, url string) error {
 
 // StartTask 开启任务
 func (ec *ExportCenter) StartTask(id int64) {
+	_, exist := startSignal[id]
+	if !exist {
+		startSignal[id] = make(chan bool, 1)
+	}
 	startSignal[id] <- true
 }
 
