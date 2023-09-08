@@ -35,7 +35,6 @@ if err != nil {
 // 返回值：
 // id:任务ID
 // keys:任务队列所使用的所有key值，这些key需要用户自己去使用，比如同时向所有队列推入数据，这样的话，导出数据的效率会更高
-// 你也可以只向keys[0]去推送数据，后面的数据会根据SheetMaxRows自动增加到下一个队列，但是这样的效率意味着只使用了一个队列
 id, keys, err := center.CreateTask(
     "test",
     "test_name",
