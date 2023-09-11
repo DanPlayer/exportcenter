@@ -21,7 +21,7 @@ import (
 var DbClient *gorm.DB
 var log = logrus.New()
 
-var startSignal = make(map[int64]chan bool)
+var startSignal sync.Map
 
 type ExportCenter struct {
 	Db            *gorm.DB
@@ -140,7 +140,7 @@ func (ec *ExportCenter) CreateTask(key, name, description, source, destination, 
 	}
 
 	// 开启任务开始信号通道
-	startSignal[int64(task.ID)] = make(chan bool, 1)
+	startSignal.Store(int64(task.ID), make(chan bool, 1))
 
 	return task.ID, keys, err
 }
@@ -195,11 +195,8 @@ func (ec *ExportCenter) UpdateTaskErrLogUrl(id int64, url string) error {
 
 // StartTask 开启任务
 func (ec *ExportCenter) StartTask(id int64) {
-	_, exist := startSignal[id]
-	if !exist {
-		startSignal[id] = make(chan bool, 1)
-	}
-	startSignal[id] <- true
+	val, _ := startSignal.LoadOrStore(id, make(chan bool, 1))
+	val.(chan bool) <- true
 }
 
 // ExportToExcel 导出成excel表格，格式
@@ -230,11 +227,16 @@ func (ec *ExportCenter) ExportToExcel(id int64, filePath string, before func(key
 		_ = ec.UpdateTaskErrLogUrl(id, logPath)
 	}()
 
+	signal, ok := startSignal.Load(id)
+	if !ok {
+		return err
+	}
+
 	// 接收到开启信号再开启任务
 	start := false
 	for {
 		select {
-		case start = <-startSignal[id]:
+		case start = <-signal.(chan bool):
 			if start {
 				break
 			}
@@ -243,7 +245,7 @@ func (ec *ExportCenter) ExportToExcel(id int64, filePath string, before func(key
 			return nil
 		}
 		if start {
-			close(startSignal[id])
+			close(signal.(chan bool))
 			break
 		}
 	}
