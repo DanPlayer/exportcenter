@@ -19,7 +19,6 @@ import (
 )
 
 var DbClient *gorm.DB
-var log = logrus.New()
 
 var startSignal sync.Map
 
@@ -202,6 +201,7 @@ func (ec *ExportCenter) StartTask(id int64) {
 // ExportToExcel 导出成excel表格，格式
 func (ec *ExportCenter) ExportToExcel(id int64, filePath string, before func(key string) error) (err error) {
 	// 创建日志文件
+	var log = logrus.New()
 	logPath := fmt.Sprintf("/export_log/export-system(task_id-%d).log", id)
 	logger := &lumberjack.Logger{
 		Filename:   ec.logRootPath + logPath,
